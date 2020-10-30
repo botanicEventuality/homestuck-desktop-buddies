@@ -191,7 +191,7 @@ class BuddySelection(QWidget):
     def init_ui(self):
         # Set the window icon and title
         self.setWindowIcon(QtGui.QIcon(resource_path('graphics/logo.ico')))
-        self.setWindowTitle("Homestuck Desktop Buddies v0.2.0")
+        self.setWindowTitle("Homestuck Desktop Buddies v0.3.0")
 
         # Set window geometry and disable resizing
         self.setGeometry(0, 0, 850, 400)
@@ -245,10 +245,10 @@ class BuddySelection(QWidget):
                                       "    background-color: #c6c6c6;\n"
                                       "}")
         self.john_button.setText("")
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(resource_path("graphics/menu/john-icon.png")), QtGui.QIcon.Normal,
+        john_icon = QtGui.QIcon()
+        john_icon.addPixmap(QtGui.QPixmap(resource_path("graphics/menu/john-icon.png")), QtGui.QIcon.Normal,
                         QtGui.QIcon.Off)
-        self.john_button.setIcon(icon1)
+        self.john_button.setIcon(john_icon)
         self.john_button.setIconSize(QtCore.QSize(160, 160))
         self.john_button.setCheckable(True)
         self.john_button.setChecked(False)
@@ -258,11 +258,23 @@ class BuddySelection(QWidget):
         self.grid_layout_2.addWidget(self.john_button, 0, 0, 1, 1)
 
         self.rose_button = QtWidgets.QPushButton(self.grid_layout_widget_2)
-        self.rose_button.setEnabled(False)
+        self.rose_button.setStyleSheet("QPushButton {\n"
+                                       "    border: none;\n"
+                                       "    background-color: #efefef;\n"
+                                       "}\n"
+                                       "\n"
+                                       "QPushButton:checked{\n"
+                                       "    border-top: 2px solid #535353;\n"
+                                       "    border-left: 2px solid #535353;\n"
+                                       "    background-color: #c6c6c6;\n"
+                                       "}")
         self.rose_button.setText("")
-        self.rose_button.setIcon(icon)
+        rose_icon = QtGui.QIcon()
+        rose_icon.addPixmap(QtGui.QPixmap(resource_path("graphics/menu/rose-icon.png")), QtGui.QIcon.Normal,
+                            QtGui.QIcon.Off)
+        self.rose_button.setIcon(rose_icon)
         self.rose_button.setIconSize(QtCore.QSize(160, 160))
-        self.rose_button.setCheckable(False)
+        self.rose_button.setCheckable(True)
         self.rose_button.setFlat(True)
         self.rose_button.setObjectName("roseButton")
         self.grid_layout_2.addWidget(self.rose_button, 0, 1, 1, 1)
@@ -279,10 +291,10 @@ class BuddySelection(QWidget):
                                       "    background-color: #c6c6c6;\n"
                                       "}")
         self.dave_button.setText("")
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(resource_path("graphics/menu/dave-icon.png")), QtGui.QIcon.Normal,
+        dave_icon = QtGui.QIcon()
+        dave_icon.addPixmap(QtGui.QPixmap(resource_path("graphics/menu/dave-icon.png")), QtGui.QIcon.Normal,
                         QtGui.QIcon.Off)
-        self.dave_button.setIcon(icon2)
+        self.dave_button.setIcon(dave_icon)
         self.dave_button.setIconSize(QtCore.QSize(160, 160))
         self.dave_button.setCheckable(True)
         self.dave_button.setFlat(True)
@@ -355,12 +367,14 @@ class BuddySelection(QWidget):
 
         # Instance the available buddies and connect their respective buttons to their spawn function
         self.john = JohnBuddy()
+        self.rose = RoseBuddy()
         self.dave = DaveBuddy()
         self.jade = JadeBuddy()
 
-        self.john_button.toggled.connect(self.spawnJohn)
-        self.dave_button.toggled.connect(self.spawnDave)
-        self.jade_button.toggled.connect(self.spawnJade)
+        self.john_button.toggled.connect(self.spawn_john)
+        self.rose_button.toggled.connect(self.spawn_rose)
+        self.dave_button.toggled.connect(self.spawn_dave)
+        self.jade_button.toggled.connect(self.spawn_jade)
 
     # Override close event for main window
     def closeEvent(self, event):
@@ -394,7 +408,7 @@ class BuddySelection(QWidget):
         self.close()  # Actually close the window
 
     # Spawn the buddies
-    def spawnJohn(self):
+    def spawn_john(self):
         if self.john_button.isChecked():  # If the button is checked:
             self.john.init_ui()  # Initialize the buddy's UI
             self.john.show()  # Show the buddy
@@ -406,7 +420,18 @@ class BuddySelection(QWidget):
             self.active_buddies.remove(self.john)  # Remove the buddy form the active buddies list
 
     # Same for the other buddies
-    def spawnDave(self):
+    def spawn_rose(self):
+        if self.rose_button.isChecked():
+            self.rose.init_ui()
+            self.rose.show()
+            self.rose.end_state()
+            self.active_buddies.append(self.rose)
+        else:
+            self.rose.stop()
+            self.rose.close()
+            self.active_buddies.remove(self.rose)
+
+    def spawn_dave(self):
         if self.dave_button.isChecked():
             self.dave.init_ui()
             self.dave.show()
@@ -417,7 +442,7 @@ class BuddySelection(QWidget):
             self.dave.close()
             self.active_buddies.remove(self.dave)
 
-    def spawnJade(self):
+    def spawn_jade(self):
         if self.jade_button.isChecked():
             self.jade.init_ui()
             self.jade.show()
@@ -720,6 +745,22 @@ class JohnBuddy(HomestuckBuddy):
         self.dance_sprite = resource_path("graphics/john/john-dance.gif")
         self.abscond_sprite = resource_path("graphics/john/john-abscond.gif")
         self.stupid_sprite = resource_path("graphics/john/john-stupid.gif")
+
+        self.init_ui()
+
+
+class RoseBuddy(HomestuckBuddy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Assign the corresponding graphics
+        self.front_left_sprite = resource_path("graphics/rose/rose-front-left.png")
+        self.front_right_sprite = resource_path("graphics/rose/rose-front-right.png")
+        self.front_walk_left_sprite = resource_path("graphics/rose/rose-front-walk-left.gif")
+        self.front_walk_right_sprite = resource_path("graphics/rose/rose-front-walk-right.gif")
+        self.dance_sprite = resource_path("graphics/rose/rose-laptop.gif")
+        self.abscond_sprite = resource_path("graphics/rose/rose-abscond.gif")
+        self.stupid_sprite = resource_path("graphics/rose/rose-facepalm.gif")
 
         self.init_ui()
 

@@ -5,7 +5,7 @@ The Homestuck Kids, now on your desktop! Watch them hang around while you try to
 
 Supports multi monitor setups (in theory, at least it works on mine).
 
-Currently only John, Dave and Jade are available, but I plan on adding all the Beta and Alpha kids eventually.
+Currently only John, Rose, Dave and Jade are available, but I plan on also adding Alpha kids.
 
 Things I plan on adding eventually:
 
