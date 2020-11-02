@@ -8,9 +8,9 @@ import os
 import webbrowser
 import urllib.request, urllib.error
 import json
-import html
 import time
 from screeninfo import get_monitors
+import feedparser
 
 
 # Get path for temp folder when the program is executed
@@ -38,8 +38,8 @@ def open_about():
     webbrowser.open("https://modestcarl.itch.io/homestuck-desktop-buddies", 2)
 
 
-def open_update(part):
-    webbrowser.open("https://www.homestuck2.com/" + part, 2)
+def open_update(url):
+    webbrowser.open(url, 2)
 
 
 def open_hs():
@@ -70,26 +70,32 @@ class Worker(QThread):
         self.terminate()
 
     def check_for_update(self):
-        url = "https://upd8.ninja/latestupd8.json"  # URL to check against
+        url = "https://www.homestuck2.com/story/rss"
+        self.data_dict = {}
         try:
-            json_url = urllib.request.urlopen(url)  # Load the URL contents into JSON
-            data = json.loads(json_url.read())  # Parse that JSON into a dictionary
+            feed = feedparser.parse(url)
+            self.data_dict["last_update_date"] = feed.feed.updated
 
-            if os.path.isfile(resource_path("data/last_update.json")):   # Check if last_update.json exists
+            if os.path.isfile(resource_path("data/last_update.json")):  # Check if last_update.json exists
                 with open(resource_path("data/last_update.json"), "r") as last_update_file:  # Open it for reading
                     local_data = json.loads(last_update_file.read())  # Copy the content of the dict into another dict
-                    if local_data["parturl"] != data["parturl"]:
-                        self.updateSignal.emit(True)  # If the URLs of both dicts don't match, send the update signal
-                # Write the relevant update data to corresponding variables
-                self.parturl = data["parturl"]
-                self.title = data["title"]
-                self.page_count = data["pages"]
+                    if local_data["last_update_date"] != self.data_dict["last_update_date"]:
+                        self.updateSignal.emit(True)  # If the dates of both dicts don't match, send the update signal
+                # Write the relevant update data to the JSON file
+                for index, entries in enumerate(feed.entries):
+                    if entries.updated != self.data_dict["last_update_date"]:
+                        self.data_dict["last_update_first_page"] = feed.entries[index - 1].title
+                        self.data_dict["last_update_first_page_title"] = feed.entries[index - 1].description
+                        self.data_dict["last_update_first_page_url"] = feed.entries[index - 1].link
+                        self.data_dict["last_update_page_count"] = index
+                        break
                 with open(resource_path("data/last_update.json"), "w") as last_update_file:  # Open the JSON for writing
-                    json.dump(data, last_update_file)  # Write the new last update data to the local JSON
+                    json.dump(self.data_dict, last_update_file)  # Write the new last update data to the local JSON
             else:
                 with open(resource_path("data/last_update.json"), "w") as last_update_file:  # Open the JSON for writing
-                    json.dump(data, last_update_file)  # Write the new last update data to the local JSON
-        # Check for URL exceptions
+                    json.dump(self.data_dict, last_update_file)  # Write the new last update data to the local JSON
+
+            # data_dict["last_update"] = feed.entries[0].title
         except urllib.error.HTTPError as e:
             print(e.code)
         except urllib.error.URLError as e:
@@ -156,12 +162,14 @@ class BuddySelection(QWidget):
                 self.show()
 
     def celebrate_update(self):
-        update_title = html.unescape(self.worker.title)  # Convert HTML entities to unicode characters
-        update_title += "\n(" + str(self.worker.page_count) + " pages long.)"  # Format the update title
+        update_title = self.worker.data_dict["last_update_first_page_title"]
+
+        # Format the update title
+        update_title += "\n(" + str(self.worker.data_dict["last_update_page_count"]) + " pages long.)"
 
         self.tray_icon.showMessage("Homestuck^2 Update", update_title,
                                    QtGui.QIcon(resource_path("graphics/logo-hs2.ico")))
-        self.tray_icon.messageClicked.connect(lambda: self.open_update(self.worker.parturl))  # Open the new update
+        self.tray_icon.messageClicked.connect(self.open_update)  # Open the new update
 
         # Loop through all active buddies and make them celebrate accordingly
         for buddy in self.active_buddies:
@@ -173,8 +181,8 @@ class BuddySelection(QWidget):
         self.opener.start()
 
     # Open the HS^2 website on the first page of the last update
-    def open_update(self, part):
-        self.opener = OpenWeb(open_update, self.worker.parturl)
+    def open_update(self):
+        self.opener = OpenWeb(open_update, self.worker.data_dict["last_update_first_page_url"])
         self.opener.start()
         self.tray_icon.messageClicked.disconnect()
 
@@ -191,7 +199,7 @@ class BuddySelection(QWidget):
     def init_ui(self):
         # Set the window icon and title
         self.setWindowIcon(QtGui.QIcon(resource_path('graphics/logo.ico')))
-        self.setWindowTitle("Homestuck Desktop Buddies v0.3.0")
+        self.setWindowTitle("Homestuck Desktop Buddies v0.3.1")
 
         # Set window geometry and disable resizing
         self.setGeometry(0, 0, 850, 400)

@@ -1,7 +1,7 @@
-# Homestuck Desktop Buddies v0.3.0
+# Homestuck Desktop Buddies v0.3.1
 Desktop Companion featuring the Homestuck Kids
 
-The Homestuck Kids, now on your desktop! Watch them hang around while you try to work, study, or do anything remotely productive! Don't let them distract you too much! The program also notifies you whenever Homestuck^2 updates, connecting to upd8.ninja every 30 seconds.
+The Homestuck Kids, now on your desktop! Watch them hang around while you try to work, study, or do anything remotely productive! Don't let them distract you too much! The program also notifies you whenever Homestuck^2 updates, connecting to Homestuck^2 RSS feed every 30 seconds.
 
 Supports multi monitor setups (in theory, at least it works on mine).
 
