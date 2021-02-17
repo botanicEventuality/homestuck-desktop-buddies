@@ -1,16 +1,12 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt, QPoint, QThread, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import Qt, QPoint, QThread, pyqtSlot
 from PyQt5.QtGui import QPixmap, QMovie
 from PyQt5.QtWidgets import QApplication, QLabel, QSystemTrayIcon, QAction, QMenu, QWidget, QDesktopWidget
 import sys
 import random
 import os
 import webbrowser
-import urllib.request, urllib.error
-import json
-import time
 from screeninfo import get_monitors
-import feedparser
 
 
 # Get path for temp folder when the program is executed
@@ -38,68 +34,12 @@ def open_about():
     webbrowser.open("https://modestcarl.itch.io/homestuck-desktop-buddies", 2)
 
 
-def open_update(url):
-    webbrowser.open(url, 2)
-
-
 def open_hs():
     webbrowser.open("https://www.homestuck.com/", 2)
 
 
 def open_hs2():
     webbrowser.open("https://www.homestuck2.com/", 2)
-
-
-# Thread for checking for HS^2 updates
-class Worker(QThread):
-    updateSignal = pyqtSignal(bool)
-
-    def __init__(self,  parent=None):
-        QThread.__init__(self, parent)
-        self.running = False
-
-    @pyqtSlot()
-    def run(self):
-        self.running = True
-        while self.running:
-            self.check_for_update()
-            time.sleep(30)  # Check for update every 30 seconds
-
-    def stop(self):
-        self.running = False
-        self.terminate()
-
-    def check_for_update(self):
-        url = "https://www.homestuck2.com/story/rss"
-        self.data_dict = {}
-        try:
-            feed = feedparser.parse(url)
-            self.data_dict["last_update_date"] = feed.feed.updated
-
-            if os.path.isfile(resource_path("data/last_update.json")):  # Check if last_update.json exists
-                with open(resource_path("data/last_update.json"), "r") as last_update_file:  # Open it for reading
-                    local_data = json.loads(last_update_file.read())  # Copy the content of the dict into another dict
-                    if local_data["last_update_date"] != self.data_dict["last_update_date"]:
-                        self.updateSignal.emit(True)  # If the dates of both dicts don't match, send the update signal
-                # Write the relevant update data to the JSON file
-                for index, entries in enumerate(feed.entries):
-                    if entries.updated != self.data_dict["last_update_date"]:
-                        self.data_dict["last_update_first_page"] = feed.entries[index - 1].title
-                        self.data_dict["last_update_first_page_title"] = feed.entries[index - 1].description
-                        self.data_dict["last_update_first_page_url"] = feed.entries[index - 1].link
-                        self.data_dict["last_update_page_count"] = index
-                        break
-                with open(resource_path("data/last_update.json"), "w") as last_update_file:  # Open the JSON for writing
-                    json.dump(self.data_dict, last_update_file)  # Write the new last update data to the local JSON
-            else:
-                with open(resource_path("data/last_update.json"), "w") as last_update_file:  # Open the JSON for writing
-                    json.dump(self.data_dict, last_update_file)  # Write the new last update data to the local JSON
-
-            # data_dict["last_update"] = feed.entries[0].title
-        except urllib.error.HTTPError as e:
-            print(e.code)
-        except urllib.error.URLError as e:
-            print(e.args)
 
 
 class BuddySelection(QWidget):
@@ -150,41 +90,16 @@ class BuddySelection(QWidget):
 
         self.minimized_once = False  # Variable for checking if the window has been minimized to tray once
 
-        # Creation of the thread to check for updates
-        self.worker = Worker(self)
-        self.worker.updateSignal.connect(self.celebrate_update)
-        self.worker.start()
-
     def show_hide(self, reason):
         # If the system tray icon was clicked, and the main window is hidden, show the main window
         if reason == QSystemTrayIcon.Trigger:
             if self.isHidden():
                 self.show()
 
-    def celebrate_update(self):
-        update_title = self.worker.data_dict["last_update_first_page_title"]
-
-        # Format the update title
-        update_title += "\n(" + str(self.worker.data_dict["last_update_page_count"]) + " pages long.)"
-
-        self.tray_icon.showMessage("Homestuck^2 Update", update_title,
-                                   QtGui.QIcon(resource_path("graphics/logo-hs2.ico")))
-        self.tray_icon.messageClicked.connect(self.open_update)  # Open the new update
-
-        # Loop through all active buddies and make them celebrate accordingly
-        for buddy in self.active_buddies:
-            buddy.celebrate_update()
-
     # Open the itch.io page for the project
     def open_about(self):
         self.opener = OpenWeb(open_about)
         self.opener.start()
-
-    # Open the HS^2 website on the first page of the last update
-    def open_update(self):
-        self.opener = OpenWeb(open_update, self.worker.data_dict["last_update_first_page_url"])
-        self.opener.start()
-        self.tray_icon.messageClicked.disconnect()
 
     # Open the Homestuck website
     def open_hs(self):
@@ -199,13 +114,13 @@ class BuddySelection(QWidget):
     def init_ui(self):
         # Set the window icon and title
         self.setWindowIcon(QtGui.QIcon(resource_path('graphics/logo.ico')))
-        self.setWindowTitle("Homestuck Desktop Buddies v0.3.1")
+        self.setWindowTitle("Homestuck Desktop Buddies v1.0.0")
 
         # Set window geometry and disable resizing
-        self.setGeometry(0, 0, 850, 400)
-        self.resize(850, 400)
-        self.setMinimumSize(QtCore.QSize(850, 400))
-        self.setMaximumSize(QtCore.QSize(850, 400))
+        self.setGeometry(0, 0, 850, 240)
+        self.resize(850, 240)
+        self.setMinimumSize(QtCore.QSize(850, 240))
+        self.setMaximumSize(QtCore.QSize(850, 240))
         self.setStyleSheet("background-color: #c6c6c6;")
 
         # Center window
@@ -216,7 +131,7 @@ class BuddySelection(QWidget):
 
         # Initialize the rest of the GUI
         self.grid_layout_widget = QtWidgets.QWidget(self)
-        self.grid_layout_widget.setGeometry(QtCore.QRect(60, 0, 730, 400))
+        self.grid_layout_widget.setGeometry(QtCore.QRect(60, 0, 730, 240))
         self.grid_layout_widget.setObjectName("gridLayoutWidget")
         self.grid_layout = QtWidgets.QGridLayout(self.grid_layout_widget)
         self.grid_layout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
@@ -229,10 +144,10 @@ class BuddySelection(QWidget):
         self.frame.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
         self.frame.setObjectName("frame")
-        self.frame.resize(730, 400)
+        self.frame.resize(730, 240)
 
         self.grid_layout_widget_2 = QtWidgets.QWidget(self.frame)
-        self.grid_layout_widget_2.setGeometry(QtCore.QRect(9, 0, 711, 401))
+        self.grid_layout_widget_2.setGeometry(QtCore.QRect(9, 0, 711, 241))
         self.grid_layout_widget_2.setObjectName("gridLayoutWidget_2")
         self.grid_layout_2 = QtWidgets.QGridLayout(self.grid_layout_widget_2)
         self.grid_layout_2.setContentsMargins(0, 0, 0, 0)
@@ -330,46 +245,6 @@ class BuddySelection(QWidget):
         self.jade_button.setFlat(True)
         self.jade_button.setObjectName("jadeButton")
         self.grid_layout_2.addWidget(self.jade_button, 0, 3, 1, 1)
-
-        self.jane_button = QtWidgets.QPushButton(self.grid_layout_widget_2)
-        self.jane_button.setEnabled(False)
-        self.jane_button.setText("")
-        self.jane_button.setIcon(icon)
-        self.jane_button.setIconSize(QtCore.QSize(160, 160))
-        self.jane_button.setCheckable(False)
-        self.jane_button.setFlat(True)
-        self.jane_button.setObjectName("janeButton")
-        self.grid_layout_2.addWidget(self.jane_button, 1, 0, 1, 1)
-
-        self.roxy_button = QtWidgets.QPushButton(self.grid_layout_widget_2)
-        self.roxy_button.setEnabled(False)
-        self.roxy_button.setText("")
-        self.roxy_button.setIcon(icon)
-        self.roxy_button.setIconSize(QtCore.QSize(160, 160))
-        self.roxy_button.setCheckable(False)
-        self.roxy_button.setFlat(True)
-        self.roxy_button.setObjectName("roxyButton")
-        self.grid_layout_2.addWidget(self.roxy_button, 1, 1, 1, 1)
-
-        self.dirk_button = QtWidgets.QPushButton(self.grid_layout_widget_2)
-        self.dirk_button.setEnabled(False)
-        self.dirk_button.setText("")
-        self.dirk_button.setIcon(icon)
-        self.dirk_button.setIconSize(QtCore.QSize(160, 160))
-        self.dirk_button.setCheckable(False)
-        self.dirk_button.setFlat(True)
-        self.dirk_button.setObjectName("dirkButton")
-        self.grid_layout_2.addWidget(self.dirk_button, 1, 2, 1, 1)
-
-        self.jake_button = QtWidgets.QPushButton(self.grid_layout_widget_2)
-        self.jake_button.setEnabled(False)
-        self.jake_button.setText("")
-        self.jake_button.setIcon(icon)
-        self.jake_button.setIconSize(QtCore.QSize(160, 160))
-        self.jake_button.setCheckable(False)
-        self.jake_button.setFlat(True)
-        self.jake_button.setObjectName("jakeButton")
-        self.grid_layout_2.addWidget(self.jake_button, 1, 3, 1, 1)
 
         self.grid_layout.addWidget(self.frame, 0, 0, 1, 1)
 
@@ -524,7 +399,7 @@ class HomestuckBuddy(QLabel):
         self.move_timer = QtCore.QTimer(self)
         self.change_state_timer = QtCore.QTimer(self)
         self.moving = False
-        self.setGeometry(960 - 150, 540 - 128, 300, 350)
+        self.setGeometry(960 - 150, 540 - 128, 650, 400)
 
     # Pick a state instead of randomly choosing one
     def pick_state(self, state):
@@ -615,22 +490,22 @@ class HomestuckBuddy(QLabel):
 
             # Bounce off the screen limits
             # Using magic numbers here, I'll fix it later
-            if self.pos().x() < -75:
+            if self.pos().x() < -250:
                 self.gif = QMovie(self.front_walk_right_sprite)
                 self.setMovie(self.gif)
                 self.gif.start()
                 self.dir_x *= -1
 
-            if self.pos().x() > self.max_width - 225:
+            if self.pos().x() > self.max_width - 400:
                 self.gif = QMovie(self.front_walk_left_sprite)
                 self.setMovie(self.gif)
                 self.gif.start()
                 self.dir_x *= -1
 
-            if self.pos().y() < -64:
+            if self.pos().y() < -150:
                 self.dir_y *= -1
 
-            if self.pos().y() > self.max_height - 300:
+            if self.pos().y() > self.max_height - 400:
                 self.dir_y *= -1
 
         elif self.state == "DRAG":
@@ -725,10 +600,10 @@ class HomestuckBuddy(QLabel):
         if not self.__press_pos.isNull():
             # Check against screen limits. If it's not colliding, move the character
             # Using magic numbers here too, I'll fix it later
-            if (not event.globalX() - self.__press_pos.x() < -70\
-                    and not event.globalX() - self.__press_pos.x() > self.max_width - 230\
-                    and not event.globalY() - self.__press_pos.y() < -60\
-                    and not event.globalY() - self.__press_pos.y() > self.max_height - 310):
+            if (not event.globalX() - self.__press_pos.x() < -250
+                    and not event.globalX() - self.__press_pos.x() > self.max_width - 400
+                    and not event.globalY() - self.__press_pos.y() < -150
+                    and not event.globalY() - self.__press_pos.y() > self.max_height - 400):
                self.move(self.pos() + (event.pos() - self.__press_pos))
 
     # Stop function called when the character is despawned
